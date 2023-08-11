@@ -5,7 +5,7 @@ import struct
 from typing import List
 
 from pandas.core.indexing import need_slice
-from .block import Block
+from .block import Block, Sol
 
 def __write_plot3D_block_binary(f,B:Block):
     """Write binary plot3D block which contains X,Y,Z
@@ -27,6 +27,18 @@ def __write_plot3D_block_binary(f,B:Block):
     write_var(B.Y)
     write_var(B.Z)
 
+def __write_plot3D_block_binary_sol(f,B:Sol):
+
+    def write_var(V:np.ndarray):
+        for k in range(B.KMAX):
+            for j in range(B.JMAX):
+                for i in range(B.IMAX):
+                    f.write(struct.pack('f',V[i,j,k]))
+    write_var(B.RO)
+    write_var(B.ROVX)
+    write_var(B.ROVY)
+    write_var(B.ROVZ)
+    write_var(B.ROE)        
 
 def __write_plot3D_block_ASCII(f,B:Block,columns:int=6):
     """Write plot3D block in ascii format 
@@ -81,3 +93,21 @@ def write_plot3D(filename:str,blocks:List[Block],binary:bool=True):
                 f.write('{0:d} {1:d} {2:d}\n'.format(IMAX,JMAX,KMAX))            
             for b in blocks:
                 __write_plot3D_block_ASCII(f,b)
+
+
+def write_plot3D_sol(filename:str,blocks:List[Sol]):
+
+    with open(filename,'wb') as f:
+        f.write(struct.pack('I',len(blocks)))
+        for b in blocks:
+            IMAX,JMAX,KMAX = b.RO.shape
+            f.write(struct.pack('I',IMAX))
+            f.write(struct.pack('I',JMAX))
+            f.write(struct.pack('I',KMAX))
+
+        for b in blocks:
+            f.write(struct.pack('f',b.mach))
+            f.write(struct.pack('f',b.alpha))
+            f.write(struct.pack('f',b.rey))
+            f.write(struct.pack('f',b.time))            
+            __write_plot3D_block_binary_sol(f,b)

@@ -2,7 +2,7 @@ import numpy as np
 import os.path as osp
 import struct
 from typing import List
-from .block import Block
+from .block import Block, Sol
 from scipy.io import FortranFile
 
 def __read_plot3D_chunk_binary(f,IMAX:int,JMAX:int,KMAX:int, big_endian:bool=False):
@@ -160,6 +160,39 @@ def read_plot3D(filename:str, binary:bool=True,big_endian:bool=False):
                     Z, offset = __read_plot3D_chunk_ASCII(tokenArray,offset,IMAX[b],JMAX[b],KMAX[b])
                     b_temp = Block(X,Y,Z)                    
                     blocks.append(b_temp)
+    return blocks
+
+
+
+def read_plot3D_sol(filename:str):
+
+    blocks = list()
+    if osp.isfile(filename):
+        with open(filename,'rb') as f:
+            nblocks = struct.unpack("I",f.read(4))[0] # Read bytes            
+            IMAX = list(); JMAX = list(); KMAX = list()
+            for b in range(nblocks):
+                IMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
+                JMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
+                KMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
+
+            for b in range(nblocks):
+
+                mach = struct.unpack("f",f.read(4))[0] # Read bytes
+                alpha = struct.unpack("f",f.read(4))[0] # Read bytes
+                rey = struct.unpack("f",f.read(4))[0] # Read bytes
+                time  =  struct.unpack("f",f.read(4))[0] # Read bytes
+                
+                RO = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                ROVX = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                ROVY = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                ROVZ = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                ROE = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)                                
+                b_temp = Sol(RO,ROVX,ROVY,ROVZ,ROE,mach,alpha,rey,time)                    
+                blocks.append(b_temp)
+    else:
+        raise FileNotFoundError
+
     return blocks
 
 

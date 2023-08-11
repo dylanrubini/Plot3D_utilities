@@ -164,6 +164,23 @@ class Block:
                     v[i,j,k]= vol12/12
         return v
 
+class Sol:
+
+    def __init__(self, RO:np.ndarray,ROVX:np.ndarray,ROVY:np.ndarray, ROVZ:np.ndarray, ROE:np.ndarray,
+                    mach:float, alpha:float, rey:float, time:float):
+
+        self.IMAX,self.JMAX,self.KMAX = RO.shape; 
+        self.RO = RO
+        self.ROVX = ROVX
+        self.ROVY = ROVY
+        self.ROVZ = ROVZ
+        self.ROE = ROE     
+
+        self.mach = mach
+        self.alpha = alpha
+        self.rey = rey
+        self.time = time           
+
 def checkCollinearity(v1:np.ndarray, v2:np.ndarray):
     # Calculate their cross product
     cross_P = np.cross(v1,v2) 
