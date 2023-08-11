@@ -1,6 +1,7 @@
 import numpy as np 
 import os.path as osp
 import struct
+from pathlib import Path
 from typing import List
 from .block import Block, Sol
 from scipy.io import FortranFile
@@ -164,18 +165,38 @@ def read_plot3D(filename:str, binary:bool=True,big_endian:bool=False):
 
 
 
-def read_plot3D_sol(filename:str):
+def read_plot3D_sol(filename:str, if_standard:bool = False):
+
+    if_function_file = Path(filename).suffix
+    if if_function_file == ".fff":
+        if_function_file = True
+    else:
+        if_function_file = False
 
     blocks = list()
     if osp.isfile(filename):
         with open(filename,'rb') as f:
             nblocks = struct.unpack("I",f.read(4))[0] # Read bytes            
-            IMAX = list(); JMAX = list(); KMAX = list()
+            IMAX = list(); JMAX = list(); KMAX = list(); NVARS = list()
             for b in range(nblocks):
                 IMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
                 JMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
                 KMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
+                if not if_standard:
+                    NVARS.append(struct.unpack("I",f.read(4))[0]) # Read bytes
+                else:
+                    NVARS.append(5)
 
+            if if_function_file:
+                NVARS_ADD = NVARS[0]
+            else:
+                N_CONSV = 5
+                NVARS_ADD = NVARS[0] - N_CONSV
+                if NVARS_ADD < 0:
+                    raise ValueError("Too few solution variables")
+
+            F = [None] * NVARS_ADD
+                
             for b in range(nblocks):
 
                 mach = struct.unpack("f",f.read(4))[0] # Read bytes
@@ -183,12 +204,18 @@ def read_plot3D_sol(filename:str):
                 rey = struct.unpack("f",f.read(4))[0] # Read bytes
                 time  =  struct.unpack("f",f.read(4))[0] # Read bytes
                 
-                RO = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
-                ROVX = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
-                ROVY = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
-                ROVZ = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
-                ROE = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)                                
-                b_temp = Sol(RO,ROVX,ROVY,ROVZ,ROE,mach,alpha,rey,time)                    
+                RO = ROVX = ROVY = ROVZ = ROE = None
+                if not if_function_file:
+                    RO = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                    ROVX = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                    ROVY = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                    ROVZ = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                    ROE = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+
+                for i in range(NVARS_ADD):
+                    F[i] = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+
+                b_temp = Sol(RO,ROVX,ROVY,ROVZ,ROE,F,mach,alpha,rey,time,if_function_file)                    
                 blocks.append(b_temp)
     else:
         raise FileNotFoundError

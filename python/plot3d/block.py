@@ -167,19 +167,23 @@ class Block:
 class Sol:
 
     def __init__(self, RO:np.ndarray,ROVX:np.ndarray,ROVY:np.ndarray, ROVZ:np.ndarray, ROE:np.ndarray,
-                    mach:float, alpha:float, rey:float, time:float):
+                    F:List[np.ndarray], mach:float, alpha:float, rey:float, time:float,
+                    if_function_file:bool):
 
         self.IMAX,self.JMAX,self.KMAX = RO.shape; 
         self.RO = RO
         self.ROVX = ROVX
         self.ROVY = ROVY
         self.ROVZ = ROVZ
-        self.ROE = ROE     
+        self.ROE = ROE   
+        self.F = F
+        self.N_VAR_ADD = len(self.F)
 
         self.mach = mach
         self.alpha = alpha
         self.rey = rey
-        self.time = time           
+        self.time = time   
+        self.if_function_file = if_function_file        
 
 def checkCollinearity(v1:np.ndarray, v2:np.ndarray):
     # Calculate their cross product

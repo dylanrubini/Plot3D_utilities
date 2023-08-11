@@ -2,6 +2,7 @@ from os import write
 import numpy as np 
 import os.path as osp
 import struct
+from pathlib import Path
 from typing import List
 
 from pandas.core.indexing import need_slice
@@ -27,18 +28,22 @@ def __write_plot3D_block_binary(f,B:Block):
     write_var(B.Y)
     write_var(B.Z)
 
-def __write_plot3D_block_binary_sol(f,B:Sol):
+def __write_plot3D_block_binary_sol(f,B:Sol, if_consv=True):
 
     def write_var(V:np.ndarray):
         for k in range(B.KMAX):
             for j in range(B.JMAX):
                 for i in range(B.IMAX):
                     f.write(struct.pack('f',V[i,j,k]))
-    write_var(B.RO)
-    write_var(B.ROVX)
-    write_var(B.ROVY)
-    write_var(B.ROVZ)
-    write_var(B.ROE)        
+    if if_consv:
+        write_var(B.RO)
+        write_var(B.ROVX)
+        write_var(B.ROVY)
+        write_var(B.ROVZ)
+        write_var(B.ROE)
+    else:
+        for f_now in B.F:
+            write_var(f_now)     
 
 def __write_plot3D_block_ASCII(f,B:Block,columns:int=6):
     """Write plot3D block in ascii format 
@@ -97,17 +102,30 @@ def write_plot3D(filename:str,blocks:List[Block],binary:bool=True):
 
 def write_plot3D_sol(filename:str,blocks:List[Sol]):
 
-    with open(filename,'wb') as f:
+    if not blocks[0].if_function_file:
+        with open(filename,'wb') as f:
+            f.write(struct.pack('I',len(blocks)))
+            for b in blocks:
+                IMAX,JMAX,KMAX = b.RO.shape
+                f.write(struct.pack('I',IMAX))
+                f.write(struct.pack('I',JMAX))
+                f.write(struct.pack('I',KMAX))
+
+            for b in blocks:
+                f.write(struct.pack('f',b.mach))
+                f.write(struct.pack('f',b.alpha))
+                f.write(struct.pack('f',b.rey))
+                f.write(struct.pack('f',b.time))            
+                __write_plot3D_block_binary_sol(f,b)
+
+    with open(Path(filename).with_suffix(".fff"),'wb') as f:
         f.write(struct.pack('I',len(blocks)))
         for b in blocks:
             IMAX,JMAX,KMAX = b.RO.shape
             f.write(struct.pack('I',IMAX))
             f.write(struct.pack('I',JMAX))
             f.write(struct.pack('I',KMAX))
+            f.write(struct.pack('I',b.N_VAR_ADD))            
 
         for b in blocks:
-            f.write(struct.pack('f',b.mach))
-            f.write(struct.pack('f',b.alpha))
-            f.write(struct.pack('f',b.rey))
-            f.write(struct.pack('f',b.time))            
-            __write_plot3D_block_binary_sol(f,b)
+            __write_plot3D_block_binary_sol(f,b, if_consv=False)
