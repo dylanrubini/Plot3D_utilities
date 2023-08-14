@@ -1,4 +1,5 @@
 import numpy as np 
+import re
 import os.path as osp
 import struct
 from pathlib import Path
@@ -165,16 +166,24 @@ def read_plot3D(filename:str, binary:bool=True,big_endian:bool=False):
 
 
 
-def read_plot3D_sol(filename:str, if_standard:bool = False):
-
+def read_plot3D_sol(filename:str, if_standard:bool = False, blocks_xyz:Block = None):
+    
     if_function_file = Path(filename).suffix
     if if_function_file == ".fff":
         if_function_file = True
     else:
         if_function_file = False
 
+    if blocks_xyz is None and not if_standard:
+        raise ValueError("If .q files then block_xyz must be passed")
+    
     blocks = list()
     if osp.isfile(filename):
+
+        if blocks_xyz is not None:
+            base, _ = osp.splitext(str(filename))
+            block_num = int(re.findall(r'\d+', base)[-1]) - 1
+
         with open(filename,'rb') as f:
             nblocks = struct.unpack("I",f.read(4))[0] # Read bytes            
             IMAX = list(); JMAX = list(); KMAX = list(); NVARS = list()
@@ -199,6 +208,9 @@ def read_plot3D_sol(filename:str, if_standard:bool = False):
                 
             for b in range(nblocks):
 
+                if blocks_xyz is not None:
+                    b_xyz = blocks_xyz[block_num]
+
                 mach = struct.unpack("f",f.read(4))[0] # Read bytes
                 alpha = struct.unpack("f",f.read(4))[0] # Read bytes
                 rey = struct.unpack("f",f.read(4))[0] # Read bytes
@@ -211,6 +223,20 @@ def read_plot3D_sol(filename:str, if_standard:bool = False):
                     ROVY = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
                     ROVZ = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
                     ROE = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
+                    
+                    if blocks_xyz is not None:
+                        R = np.sqrt(b_xyz.Y**2 + b_xyz.Z**2)
+                        theta = np.arcsin(b_xyz.Y / R)
+
+                        VX = ROVX / RO
+                        VR = ROVY / RO                    
+                        VT = ROVZ / (RO * R)
+
+                        VY = VR*np.sin(theta) + VT*np.cos(theta)
+                        VZ = VR*np.cos(theta) - VT*np.sin(theta)
+
+                        ROVY = RO * VY
+                        ROVZ = RO * VZ
 
                 for i in range(NVARS_ADD):
                     F[i] = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
