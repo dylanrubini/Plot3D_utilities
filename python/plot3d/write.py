@@ -121,7 +121,9 @@ def write_plot3D_sol(filename:str,blocks:List[Sol]):
     with open(Path(filename).with_suffix(".fff"),'wb') as f:
         f.write(struct.pack('I',len(blocks)))
         for b in blocks:
-            IMAX,JMAX,KMAX = b.RO.shape
+            IMAX = b.IMAX
+            JMAX = b.JMAX
+            KMAX = b.KMAX            
             f.write(struct.pack('I',IMAX))
             f.write(struct.pack('I',JMAX))
             f.write(struct.pack('I',KMAX))

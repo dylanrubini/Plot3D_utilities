@@ -170,7 +170,11 @@ class Sol:
                     F:List[np.ndarray], mach:float, alpha:float, rey:float, time:float,
                     if_function_file:bool):
 
-        self.IMAX,self.JMAX,self.KMAX = RO.shape; 
+        if RO is not None:
+            self.IMAX,self.JMAX,self.KMAX = RO.shape;
+        else:
+            self.IMAX,self.JMAX,self.KMAX = F[0].shape;
+            
         self.RO = RO
         self.ROVX = ROVX
         self.ROVY = ROVY

@@ -166,7 +166,7 @@ def read_plot3D(filename:str, binary:bool=True,big_endian:bool=False):
 
 
 
-def read_plot3D_sol(filename:str, if_standard:bool = False, blocks_xyz:Block = None):
+def read_plot3D_sol(filename:str, if_no_free:bool = False, blocks_xyz:Block = None):
     
     if_function_file = Path(filename).suffix
     if if_function_file == ".fff":
@@ -174,7 +174,7 @@ def read_plot3D_sol(filename:str, if_standard:bool = False, blocks_xyz:Block = N
     else:
         if_function_file = False
 
-    if blocks_xyz is None and not if_standard:
+    if blocks_xyz is None and not if_no_free:
         raise ValueError("If .q files then block_xyz must be passed")
     
     blocks = list()
@@ -191,10 +191,7 @@ def read_plot3D_sol(filename:str, if_standard:bool = False, blocks_xyz:Block = N
                 IMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
                 JMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
                 KMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
-                if not if_standard:
-                    NVARS.append(struct.unpack("I",f.read(4))[0]) # Read bytes
-                else:
-                    NVARS.append(5)
+                NVARS.append(struct.unpack("I",f.read(4))[0]) # Read bytes
 
             if if_function_file:
                 NVARS_ADD = NVARS[0]
@@ -211,10 +208,12 @@ def read_plot3D_sol(filename:str, if_standard:bool = False, blocks_xyz:Block = N
                 if blocks_xyz is not None:
                     b_xyz = blocks_xyz[block_num]
 
-                mach = struct.unpack("f",f.read(4))[0] # Read bytes
-                alpha = struct.unpack("f",f.read(4))[0] # Read bytes
-                rey = struct.unpack("f",f.read(4))[0] # Read bytes
-                time  =  struct.unpack("f",f.read(4))[0] # Read bytes
+                mach = alpha = rey = time = None
+                if not if_no_free:
+                    mach = struct.unpack("f",f.read(4))[0] # Read bytes
+                    alpha = struct.unpack("f",f.read(4))[0] # Read bytes
+                    rey = struct.unpack("f",f.read(4))[0] # Read bytes
+                    time  =  struct.unpack("f",f.read(4))[0] # Read bytes
                 
                 RO = ROVX = ROVY = ROVZ = ROE = None
                 if not if_function_file:
