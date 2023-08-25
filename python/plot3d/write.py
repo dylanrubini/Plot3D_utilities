@@ -8,7 +8,7 @@ from typing import List
 from pandas.core.indexing import need_slice
 from .block import Block, Sol
 
-def __write_plot3D_block_binary(f,B:Block):
+def __write_plot3D_block_binary(f, B:list, nblocks:int, nsplit:list):
     """Write binary plot3D block which contains X,Y,Z
         default format is Big-Endian
 
@@ -19,31 +19,82 @@ def __write_plot3D_block_binary(f,B:Block):
     '''
         https://docs.python.org/3/library/struct.html
     '''
-    def write_var(V:np.ndarray):
-        for k in range(B.KMAX):
-            for j in range(B.JMAX):
-                for i in range(B.IMAX):
-                    f.write(struct.pack('f',V[i,j,k]))
-    write_var(B.X)
-    write_var(B.Y)
-    write_var(B.Z)
 
-def __write_plot3D_block_binary_sol(f,B:Sol, if_consv=True):
+    nsplit_a, nsplit_r = nsplit
+    nsplit_all = nsplit_a * nsplit_r
 
-    def write_var(V:np.ndarray):
-        for k in range(B.KMAX):
-            for j in range(B.JMAX):
-                for i in range(B.IMAX):
-                    f.write(struct.pack('f',V[i,j,k]))
+    def write_var(V:list, name:str, nb:int):
+
+        IMAX = V[(nb*nsplit_all)].IMAX+3
+        JMAX = V[(nb*nsplit_all)].JMAX+3
+        KMAX = V[(nb*nsplit_all)].KMAX
+
+        for k in range(KMAX):
+            for nb_r in range(nsplit_r):                
+                for j in range(JMAX):
+                    for nb_a in range(nsplit_a):
+                        for i in range(IMAX):
+                            data = getattr(V[(nb*nsplit_all) + nb_a + (nb_r*nsplit_a)], name)
+                            try:
+                                d = data[i,j,k]
+                            except IndexError:
+                                break
+
+                            f.write(struct.pack('f', d))
+
+    for nb in range(nblocks):        
+        write_var(B, "X", nb)
+        write_var(B, "Y", nb)
+        write_var(B, "Z", nb)
+
+def __write_plot3D_block_binary_sol(f, B:list, nblocks:int, 
+                                    nsplit:list, if_consv=True):
+
+    nsplit_a, nsplit_r = nsplit
+    nsplit_all = nsplit_a * nsplit_r
+
+    def write_var(V:list, name:str, nb:int, i_var:int=None):
+
+        IMAX = V[(nb*nsplit_all)].IMAX+3
+        JMAX = V[(nb*nsplit_all)].JMAX+3
+        KMAX = V[(nb*nsplit_all)].KMAX
+
+        for k in range(KMAX):
+            for nb_r in range(nsplit_r):                
+                for j in range(JMAX):
+                    for nb_a in range(nsplit_a):
+                        for i in range(IMAX):
+
+                            data = getattr(V[(nb*nsplit_all) + nb_a + (nb_r*nsplit_a)], name)
+                            if i_var is not None:
+                                data = data[i_var]
+
+                            try:
+                                d = data[i,j,k]
+                            except IndexError:
+                                break
+
+                            f.write(struct.pack('f', d))
+
     if if_consv:
-        write_var(B.RO)
-        write_var(B.ROVX)
-        write_var(B.ROVY)
-        write_var(B.ROVZ)
-        write_var(B.ROE)
+
+        for nb in range(nblocks):   
+            f.write(struct.pack('f',B[nb].mach))
+            f.write(struct.pack('f',B[nb].alpha))
+            f.write(struct.pack('f',B[nb].rey))
+            f.write(struct.pack('f',B[nb].time)) 
+
+            write_var(B, "RO", nb)
+            write_var(B, "ROVX", nb)
+            write_var(B, "ROVY", nb)
+            write_var(B, "ROVZ", nb)
+            write_var(B, "ROE", nb)
+
     else:
-        for f_now in B.F:
-            write_var(f_now)     
+
+        for nb in range(nblocks):  
+            for i_var in range(len(B[nb].F)):
+                write_var(B, "F", nb, i_var)     
 
 def __write_plot3D_block_ASCII(f,B:Block,columns:int=6):
     """Write plot3D block in ascii format 
@@ -72,7 +123,7 @@ def __write_plot3D_block_ASCII(f,B:Block,columns:int=6):
     write_var(B.Y)
     write_var(B.Z)
 
-def write_plot3D(filename:str,blocks:List[Block],binary:bool=True):
+def write_plot3D(filename:str, nsplit:list, blocks:List[Block], binary:bool=True):
     """Writes blocks to a Plot3D file
 
     Args:
@@ -80,16 +131,39 @@ def write_plot3D(filename:str,blocks:List[Block],binary:bool=True):
         blocks (List[Block]): List containing all the blocks to write
         binary (bool, optional): Binary big endian. Defaults to True.
     """
+
+    if sum(nsplit) != 2 and not binary:
+        raise ValueError("ASCII files not supported if blocks splitting")
+
+    nsplit_a, nsplit_r = nsplit
+    nsplit_all = nsplit_a * nsplit_r
+
     if binary:
         with open(filename,'wb') as f:
-            f.write(struct.pack('I',len(blocks)))
-            for b in blocks:
-                IMAX,JMAX,KMAX = b.X.shape
-                f.write(struct.pack('I',IMAX))
-                f.write(struct.pack('I',JMAX))
-                f.write(struct.pack('I',KMAX))
-            for b in blocks:
-                __write_plot3D_block_binary(f,b)
+
+            nblocks = len(blocks)
+            nblocks //= nsplit_all            
+            f.write(struct.pack('I',nblocks))
+
+            for i, b in enumerate(blocks):
+
+                if i % nsplit_all == 0:
+
+                    IMAX = 0
+                    for l in range(nsplit_a):
+                        IMAX += blocks[i+l].IMAX
+
+                    JMAX = 0
+                    for l in range(nsplit_r):
+                        JMAX += blocks[i+(l*nsplit_a)].JMAX
+
+                    KMAX = b.KMAX
+
+                    f.write(struct.pack('I',IMAX))
+                    f.write(struct.pack('I',JMAX))
+                    f.write(struct.pack('I',KMAX))
+
+            __write_plot3D_block_binary(f, blocks, nblocks, nsplit)
     else:
         with open(filename,'w') as f:
             f.write('{0:d}\n'.format(len(blocks)))
@@ -100,34 +174,61 @@ def write_plot3D(filename:str,blocks:List[Block],binary:bool=True):
                 __write_plot3D_block_ASCII(f,b)
 
 
-def write_plot3D_sol(filename:str,blocks:List[Sol]):
+def write_plot3D_sol(filename:str, nsplit:list, blocks:List[Sol]):
+
+    nsplit_a, nsplit_r = nsplit
+    nsplit_all = nsplit_a * nsplit_r
 
     if not blocks[0].if_function_file:
         with open(filename,'wb') as f:
-            f.write(struct.pack('I',len(blocks)))
-            for b in blocks:
-                IMAX,JMAX,KMAX = b.RO.shape
-                f.write(struct.pack('I',IMAX))
-                f.write(struct.pack('I',JMAX))
-                f.write(struct.pack('I',KMAX))
 
-            for b in blocks:
-                f.write(struct.pack('f',b.mach))
-                f.write(struct.pack('f',b.alpha))
-                f.write(struct.pack('f',b.rey))
-                f.write(struct.pack('f',b.time))            
-                __write_plot3D_block_binary_sol(f,b)
+            nblocks = len(blocks)
+            nblocks //= nsplit_all            
+            f.write(struct.pack('I',nblocks))
+
+            for i, b in enumerate(blocks):
+
+                if i % nsplit_all == 0:
+
+                    IMAX = 0
+                    for l in range(nsplit_a):
+                        IMAX += blocks[i+l].IMAX
+
+                    JMAX = 0
+                    for l in range(nsplit_r):
+                        JMAX += blocks[i+(l*nsplit_a)].JMAX
+
+                    KMAX = b.KMAX
+
+                    f.write(struct.pack('I',IMAX))
+                    f.write(struct.pack('I',JMAX))
+                    f.write(struct.pack('I',KMAX))                 
+           
+            __write_plot3D_block_binary_sol(f, blocks, nblocks, nsplit)
 
     with open(Path(filename).with_suffix(".fff"),'wb') as f:
-        f.write(struct.pack('I',len(blocks)))
-        for b in blocks:
-            IMAX = b.IMAX
-            JMAX = b.JMAX
-            KMAX = b.KMAX            
-            f.write(struct.pack('I',IMAX))
-            f.write(struct.pack('I',JMAX))
-            f.write(struct.pack('I',KMAX))
-            f.write(struct.pack('I',b.N_VAR_ADD))            
 
-        for b in blocks:
-            __write_plot3D_block_binary_sol(f,b, if_consv=False)
+        nblocks = len(blocks)
+        nblocks //= nsplit_all            
+        f.write(struct.pack('I',nblocks))
+
+        for i, b in enumerate(blocks):
+
+            if i % nsplit_all == 0:
+
+                IMAX = 0
+                for l in range(nsplit_a):
+                    IMAX += blocks[i+l].IMAX
+
+                JMAX = 0
+                for l in range(nsplit_r):
+                    JMAX += blocks[i+(l*nsplit_a)].JMAX
+
+                KMAX = b.KMAX
+
+                f.write(struct.pack('I',IMAX))
+                f.write(struct.pack('I',JMAX))
+                f.write(struct.pack('I',KMAX))          
+                f.write(struct.pack('I',b.N_VAR_ADD))
+                  
+        __write_plot3D_block_binary_sol(f, blocks, nblocks, nsplit, if_consv=False)
