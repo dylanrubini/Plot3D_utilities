@@ -240,7 +240,7 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False, blocks_xyz:Block = No
                 for i in range(NVARS_ADD):
                     F[i] = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
 
-                b_temp = Sol(RO,ROVX,ROVY,ROVZ,ROE,F,mach,alpha,rey,time,if_function_file)                    
+                b_temp = Sol(RO,ROVX,ROVY,ROVZ,ROE,F[:],mach,alpha,rey,time,if_function_file)                    
                 blocks.append(b_temp)
     else:
         raise FileNotFoundError
