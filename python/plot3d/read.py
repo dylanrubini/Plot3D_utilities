@@ -223,19 +223,19 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False, blocks_xyz:Block = No
                     ROVZ = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
                     ROE = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
                     
-                    if blocks_xyz is not None:
-                        R = np.sqrt(b_xyz.Y**2 + b_xyz.Z**2)
-                        theta = np.arcsin(b_xyz.Y / R)
+                    # if blocks_xyz is not None:
+                    #     R = np.sqrt(b_xyz.Y**2 + b_xyz.Z**2)
+                    #     theta = np.arcsin(b_xyz.Y / R)
 
-                        VX = ROVX / RO
-                        VR = ROVY / RO                    
-                        VT = ROVZ / (RO * R)
+                    #     VX = ROVX / RO
+                    #     VR = ROVY / RO                    
+                    #     VT = ROVZ / (RO * R)
 
-                        VY = VR*np.sin(theta) + VT*np.cos(theta)
-                        VZ = VR*np.cos(theta) - VT*np.sin(theta)
+                    #     VY = VR*np.sin(theta) + VT*np.cos(theta)
+                    #     VZ = VR*np.cos(theta) - VT*np.sin(theta)
 
-                        ROVY = RO * VY
-                        ROVZ = RO * VZ
+                    #     ROVY = RO * VY
+                    #     ROVZ = RO * VZ
 
                 for i in range(NVARS_ADD):
                     F[i] = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
