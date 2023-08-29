@@ -25,8 +25,15 @@ def __write_plot3D_block_binary(f, B:list, nblocks:int, nsplit:list):
 
     def write_var(V:list, name:str, nb:int):
 
-        IMAX = V[(nb*nsplit_all)].IMAX+3
-        JMAX = V[(nb*nsplit_all)].JMAX+3
+        IMAX = 0
+        JMAX = 0
+        for vv in V[(nb*nsplit_all):((nb*nsplit_all)+nsplit_all)]:
+            if vv.IMAX > IMAX:
+                IMAX = vv.IMAX
+
+            if vv.JMAX > JMAX:
+                JMAX = vv.JMAX
+                
         KMAX = V[(nb*nsplit_all)].KMAX
 
         for k in range(KMAX):
@@ -55,8 +62,15 @@ def __write_plot3D_block_binary_sol(f, B:list, nblocks:int,
 
     def write_var(V:list, name:str, nb:int, i_var:int=None):
 
-        IMAX = V[(nb*nsplit_all)].IMAX+3
-        JMAX = V[(nb*nsplit_all)].JMAX+3
+        IMAX = 0
+        JMAX = 0
+        for vv in V[(nb*nsplit_all):((nb*nsplit_all)+nsplit_all)]:
+            if vv.IMAX > IMAX:
+                IMAX = vv.IMAX
+
+            if vv.JMAX > JMAX:
+                JMAX = vv.JMAX
+                
         KMAX = V[(nb*nsplit_all)].KMAX
 
         for k in range(KMAX):
