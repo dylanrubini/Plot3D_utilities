@@ -49,7 +49,9 @@ def __write_plot3D_block_binary(f, B:list, nblocks:int, nsplit:list):
 
                             f.write(struct.pack('f', d))
 
-    for nb in range(nblocks):        
+    filename = osp.basename(f.name)
+    for nb in range(nblocks):
+        print(f"{filename}: writing block = {nb}")        
         write_var(B, "X", nb)
         write_var(B, "Y", nb)
         write_var(B, "Z", nb)
@@ -70,7 +72,7 @@ def __write_plot3D_block_binary_sol(f, B:list, nblocks:int,
 
             if vv.JMAX > JMAX:
                 JMAX = vv.JMAX
-                
+
         KMAX = V[(nb*nsplit_all)].KMAX
 
         for k in range(KMAX):
@@ -92,7 +94,9 @@ def __write_plot3D_block_binary_sol(f, B:list, nblocks:int,
 
     if if_consv:
 
-        for nb in range(nblocks):   
+        filename = osp.basename(f.name)
+        for nb in range(nblocks):
+            print(f"{filename}: writing block = {nb}")    
             f.write(struct.pack('f',B[nb].mach))
             f.write(struct.pack('f',B[nb].alpha))
             f.write(struct.pack('f',B[nb].rey))
@@ -105,8 +109,9 @@ def __write_plot3D_block_binary_sol(f, B:list, nblocks:int,
             write_var(B, "ROE", nb)
 
     else:
-
-        for nb in range(nblocks):  
+        filename = osp.basename(f.name)
+        for nb in range(nblocks):
+            print(f"{filename}: writing block = {nb}")  
             for i_var in range(len(B[nb].F)):
                 write_var(B, "F", nb, i_var)     
 
