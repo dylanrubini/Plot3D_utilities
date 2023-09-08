@@ -166,7 +166,8 @@ def read_plot3D(filename:str, binary:bool=True,big_endian:bool=False):
 
 
 
-def read_plot3D_sol(filename:str, if_no_free:bool = False, blocks_xyz:Block = None):
+def read_plot3D_sol(filename:str, if_no_free:bool = False, 
+    if_nvars:bool = True, blocks_xyz:Block = None):
     
     if_function_file = Path(filename).suffix
     if if_function_file == ".fff":
@@ -174,8 +175,8 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False, blocks_xyz:Block = No
     else:
         if_function_file = False
 
-    if blocks_xyz is None and not if_no_free:
-        raise ValueError("If .q files then block_xyz must be passed")
+    # if blocks_xyz is None and not if_no_free:
+    #     raise ValueError("If .q files then block_xyz must be passed")
     
     blocks = list()
     if osp.isfile(filename):
@@ -191,15 +192,19 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False, blocks_xyz:Block = No
                 IMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
                 JMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
                 KMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
-                NVARS.append(struct.unpack("I",f.read(4))[0]) # Read bytes
+                if if_nvars:
+                    NVARS.append(struct.unpack("I",f.read(4))[0]) # Read bytes
 
             if if_function_file:
                 NVARS_ADD = NVARS[0]
             else:
-                N_CONSV = 5
-                NVARS_ADD = NVARS[0] - N_CONSV
-                if NVARS_ADD < 0:
-                    raise ValueError("Too few solution variables")
+                if NVARS:
+                    N_CONSV = 5
+                    NVARS_ADD = NVARS[0] - N_CONSV
+                    if NVARS_ADD < 0:
+                        raise ValueError("Too few solution variables")
+                else:
+                    NVARS_ADD = 0
 
             F = [None] * NVARS_ADD
                 
