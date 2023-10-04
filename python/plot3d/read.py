@@ -134,6 +134,7 @@ def read_plot3D(filename:str, binary:bool=True,big_endian:bool=False):
                         KMAX.append(struct.unpack("I",f.read(4))[0]) # Read bytes
 
                 for b in range(nblocks):
+                    print(f"Read XYZ file in block = {b}")
                     X = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], big_endian)
                     Y = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], big_endian)
                     Z = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], big_endian)
@@ -183,7 +184,7 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False,
 
         if blocks_xyz is not None:
             base, _ = osp.splitext(str(filename))
-            block_num = int(re.findall(r'\d+', base)[-1]) - 1
+            # block_num = int(re.findall(r'\d+', base)[-1]) - 1
 
         with open(filename,'rb') as f:
             nblocks = struct.unpack("I",f.read(4))[0] # Read bytes            
@@ -210,8 +211,8 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False,
                 
             for b in range(nblocks):
 
-                if blocks_xyz is not None:
-                    b_xyz = blocks_xyz[block_num]
+                # if blocks_xyz is not None:
+                #     b_xyz = blocks_xyz[block_num]
 
                 mach = alpha = rey = time = None
                 if not if_no_free:
@@ -222,6 +223,7 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False,
                 
                 RO = ROVX = ROVY = ROVZ = ROE = None
                 if not if_function_file:
+                    print(f"Read Q file in block = {b}")
                     RO = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
                     ROVX = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
                     ROVY = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
@@ -242,6 +244,8 @@ def read_plot3D_sol(filename:str, if_no_free:bool = False,
                     #     ROVY = RO * VY
                     #     ROVZ = RO * VZ
 
+                if NVARS_ADD > 0:
+                    print(f"Read F file in block = {b}")
                 for i in range(NVARS_ADD):
                     F[i] = __read_plot3D_chunk_binary(f,IMAX[b],JMAX[b],KMAX[b], False)
 

@@ -162,7 +162,7 @@ class Block:
                                         +cf[2+n,l]*a[3+l][i,j-1+n,k]
                                         +cf[4+n,l]*a[6+l][i,j,k-1+n])
                     v[i,j,k]= vol12/12
-        return v
+        return v, a
 
 class Sol:
 
